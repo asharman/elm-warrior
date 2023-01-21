@@ -1,5 +1,6 @@
 module Player exposing (takeTurn)
 
+import Action
 import Warrior exposing (Warrior)
 import Warrior.Direction as Direction exposing (Direction)
 import Warrior.History as History exposing (History)
@@ -11,8 +12,8 @@ takeTurn warrior map history =
     let
         currentHeading =
             History.previousActions warrior history
-                |> List.filter isMovement
-                |> (List.head >> Maybe.andThen actionDirection)
+                |> List.filter Action.isMovement
+                |> (List.head >> Maybe.andThen Action.direction)
                 |> Maybe.withDefault Direction.Right
     in
     if didPlayerMove warrior history then
@@ -33,42 +34,6 @@ didPlayerMove warrior history =
     previousPosition
         |> Maybe.map ((/=) (Warrior.position warrior))
         |> Maybe.withDefault True
-
-
-isMovement : Warrior.Action -> Bool
-isMovement action =
-    case action of
-        Warrior.Move _ ->
-            True
-
-        _ ->
-            False
-
-
-actionDirection : Warrior.Action -> Maybe Direction
-actionDirection action =
-    case action of
-        Warrior.Move dir ->
-            Just dir
-
-        Warrior.Attack dir ->
-            Just dir
-
-        _ ->
-            Nothing
-
-
-mapDirection : (Direction -> Direction) -> Warrior.Action -> Warrior.Action
-mapDirection fn action =
-    case action of
-        Warrior.Move dir ->
-            Warrior.Move (fn dir)
-
-        Warrior.Attack dir ->
-            Warrior.Attack (fn dir)
-
-        _ ->
-            action
 
 
 cycleDirectionCW : Direction -> Direction
