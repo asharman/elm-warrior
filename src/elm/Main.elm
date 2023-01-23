@@ -9,8 +9,8 @@ import Warrior.Program as Warrior
 main : Program () Warrior.Model Warrior.Msg
 main =
     Warrior.program
-        { maps = Maps.all
+        { maps = [ Maps.straight ]
         , players = [ ( "Player", Player.takeTurn ) ]
-        , msPerTurn = 500
+        , msPerTurn = 2000
         , progressionFunction = Progression.reachExitPoint
         }
