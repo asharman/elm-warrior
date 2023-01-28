@@ -14,15 +14,19 @@ takeTurn : Warrior -> Map -> History -> Warrior.Action
 takeTurn warrior map history =
     let
         model =
-            Model.buildModel warrior map history
+            Model.buildModel warrior map history |> Debug.log "Model"
 
         interestingNeighbors =
             Map.neighboringTiles warrior map
                 |> List.filter (Tuple.second >> Map.greaterThan Tile.Empty)
     in
-    List.head interestingNeighbors
-        |> Maybe.map (Tuple.first >> Warrior.Move)
-        |> Maybe.withDefault (wander warrior history)
+    Model.nextAction model
+
+
+
+-- List.head interestingNeighbors
+--     |> Maybe.map (Tuple.first >> Warrior.Move)
+--     |> Maybe.withDefault (wander warrior history)
 
 
 wander : Warrior -> History -> Warrior.Action

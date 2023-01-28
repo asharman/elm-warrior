@@ -1,8 +1,8 @@
-module Model exposing (Model, buildModel)
+module Model exposing (Model, buildModel, nextAction)
 
 import Dict exposing (Dict)
 import Set exposing (Set)
-import Warrior exposing (Warrior)
+import Warrior exposing (Action, Warrior)
 import Warrior.Coordinate exposing (Coordinate)
 import Warrior.Direction as Direction
 import Warrior.History as History exposing (History)
@@ -116,7 +116,11 @@ type alias Graph a =
     Dict ComparableCoordinate (Node a)
 
 
-type alias Model =
+type Model
+    = Model ModelInternals
+
+
+type alias ModelInternals =
     { entities : Dict String (Set ComparableCoordinate)
     , graph : Graph Cell
     }
@@ -126,7 +130,7 @@ buildModel : Warrior -> Map -> History -> Model
 buildModel warrior map history =
     let
         initialGrid =
-            { entities = Dict.empty, graph = Dict.empty }
+            Model { entities = Dict.empty, graph = Dict.empty }
     in
     ( warrior, map )
         :: History.previousStates warrior history
@@ -138,8 +142,13 @@ buildModel warrior map history =
             initialGrid
 
 
+nextAction : Model -> Action
+nextAction (Model model) =
+    Warrior.Wait
+
+
 discoverCell : ( ComparableCoordinate, Tile.Tile ) -> Model -> Model
-discoverCell ( coord, tile ) grid =
+discoverCell ( coord, tile ) (Model model) =
     let
         updatedEntities =
             tileToString tile
@@ -149,15 +158,15 @@ discoverCell ( coord, tile ) grid =
                             entity
                             (Maybe.map <| Set.insert coord)
                             (Set.singleton coord)
-                            grid.entities
+                            model.entities
                     )
-                |> Maybe.withDefault grid.entities
+                |> Maybe.withDefault model.entities
 
         neighboringCells =
             neighboringCoordinates coord
                 |> List.map
                     (\c ->
-                        Dict.get c grid.graph
+                        Dict.get c model.graph
                             |> Maybe.map Tuple.first
                             |> Maybe.withDefault Undiscovered
                             |> Tuple.pair c
@@ -178,32 +187,33 @@ discoverCell ( coord, tile ) grid =
                   else
                     []
                 )
-                grid.graph
+                model.graph
     in
-    { graph =
-        List.foldl
-            (\( c, _ ) g ->
-                Dict.update c
-                    (Maybe.map
-                        (Tuple.mapSecond
-                            (List.filterMap
-                                (\( c2, cell2 ) ->
-                                    if coord == c2 then
-                                        if not (Tile.isWall tile) then
-                                            Just ( coord, Discovered tile )
+    Model
+        { graph =
+            List.foldl
+                (\( c, _ ) g ->
+                    Dict.update c
+                        (Maybe.map
+                            (Tuple.mapSecond
+                                (List.filterMap
+                                    (\( c2, cell2 ) ->
+                                        if coord == c2 then
+                                            if not (Tile.isWall tile) then
+                                                Just ( coord, Discovered tile )
+
+                                            else
+                                                Nothing
 
                                         else
-                                            Nothing
-
-                                    else
-                                        Just ( c2, cell2 )
+                                            Just ( c2, cell2 )
+                                    )
                                 )
                             )
                         )
-                    )
-                    g
-            )
-            updatedGraph
-            neighboringCells
-    , entities = updatedEntities
-    }
+                        g
+                )
+                updatedGraph
+                neighboringCells
+        , entities = updatedEntities
+        }
